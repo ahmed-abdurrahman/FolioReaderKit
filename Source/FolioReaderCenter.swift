@@ -422,7 +422,6 @@ class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UICollectio
             FolioReader.sharedInstance.isReaderOpen = false
             FolioReader.sharedInstance.isReaderReady = false
             FolioReader.sharedInstance.readerAudioPlayer.stop()
-            FolioReader.sharedInstance.parentViewController.tabBarController?.selectedIndex = 0
         })
     }
 
