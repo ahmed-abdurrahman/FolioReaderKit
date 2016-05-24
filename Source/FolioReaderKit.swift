@@ -28,6 +28,7 @@ internal let kCurrentAudioRate = "kCurrentAudioRate"
 internal let kCurrentHighlightStyle = "kCurrentHighlightStyle"
 internal var kCurrentMediaOverlayStyle = "kMediaOverlayStyle"
 internal let kNightMode = "kNightMode"
+internal let kTeased = "kTeased"
 internal let kHighlightRange = 30
 internal var kBookId: String!
 
@@ -62,9 +63,18 @@ public class FolioReader : NSObject {
     weak var readerSidePanel: FolioReaderSidePanel!
     weak var readerContainer: FolioReaderContainer!
     weak var readerAudioPlayer: FolioReaderAudioPlayer!
+    weak var parentViewController: UIViewController!
     var isReaderOpen = false
     var isReaderReady = false
     
+    
+    var teased: Bool {
+                get { return FolioReader.defaults.boolForKey(kTeased) }
+                    set (value) {
+                        FolioReader.defaults.setBool(value, forKey: kTeased)
+                        FolioReader.defaults.synchronize()
+                    }
+            }
     
     var nightMode: Bool {
         get { return FolioReader.defaults.boolForKey(kNightMode) }
@@ -131,6 +141,7 @@ public class FolioReader : NSObject {
     public class func presentReader(parentViewController parentViewController: UIViewController, withEpubPath epubPath: String, andConfig config: FolioReaderConfig, shouldRemoveEpub: Bool = true, animated: Bool = true) {
         let reader = FolioReaderContainer(config: config, epubPath: epubPath, removeEpub: shouldRemoveEpub)
         FolioReader.sharedInstance.readerContainer = reader
+        FolioReader.sharedInstance.parentViewController = parentViewController
         parentViewController.presentViewController(reader, animated: animated, completion: nil)
     }
     

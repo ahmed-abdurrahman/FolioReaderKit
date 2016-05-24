@@ -15,7 +15,7 @@ var book: FRBook!
 
 enum SlideOutState {
     case BothCollapsed
-    case LeftPanelExpanded
+    case RightPanelExpanded
     case Expanding
     
     init () {
@@ -25,32 +25,33 @@ enum SlideOutState {
 
 protocol FolioReaderContainerDelegate: class {
     /**
-    Notifies that the menu was expanded.
-    */
-    func container(didExpandLeftPanel sidePanel: FolioReaderSidePanel)
+     Notifies that the menu was expanded.
+     */
+    func container(didExpandRightPanel sidePanel: FolioReaderSidePanel)
     
     /**
-    Notifies that the menu was closed.
-    */
-    func container(didCollapseLeftPanel sidePanel: FolioReaderSidePanel)
+     Notifies that the menu was closed.
+     */
+    func container(didCollapseRightPanel sidePanel: FolioReaderSidePanel)
     
     /**
-    Notifies when the user selected some item on menu.
-    */
+     Notifies when the user selected some item on menu.
+     */
     func container(sidePanel: FolioReaderSidePanel, didSelectRowAtIndexPath indexPath: NSIndexPath, withTocReference reference: FRTocReference)
 }
 
 class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
-    weak var delegate: FolioReaderContainerDelegate!
-    var centerNavigationController: UINavigationController!
+    
+    var delegate: FolioReaderContainerDelegate!
     var centerViewController: FolioReaderCenter!
-    var leftViewController: FolioReaderSidePanel!
+    var rightViewController: FolioReaderSidePanel!
     var audioPlayer: FolioReaderAudioPlayer!
     var centerPanelExpandedOffset: CGFloat = 70
     var currentState = SlideOutState()
-    var shouldHideStatusBar = true
     private var errorOnLoad = false
     private var shouldRemoveEpub = true
+    var shouldHideStatusBar = true
+    var centerNavigationController: UINavigationController!
     
     // MARK: - Init
     
@@ -78,7 +79,7 @@ class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
             kCurrentAudioRate: 1,
             kCurrentHighlightStyle: 0,
             kCurrentMediaOverlayStyle: MediaOverlayStyle.Default.rawValue
-        ])
+            ])
     }
     
     // MARK: - View life cicle
@@ -89,6 +90,7 @@ class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
         centerViewController = FolioReaderCenter()
         centerViewController.folioReaderContainer = self
         FolioReader.sharedInstance.readerCenter = centerViewController
+        automaticallyAdjustsScrollViewInsets = false
         
         centerNavigationController = UINavigationController(rootViewController: centerViewController)
         centerNavigationController.setNavigationBarHidden(readerConfig.shouldHideNavigationOnTap, animated: false)
@@ -96,13 +98,19 @@ class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
         addChildViewController(centerNavigationController)
         centerNavigationController.didMoveToParentViewController(self)
         
+//        view.addSubview(centerViewController.view)
+//        addChildViewController(centerViewController)
+//        centerViewController.didMoveToParentViewController(self)
+        
         // Add gestures
-        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(FolioReaderContainer.handleTapGesture(_:)))
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture(_:)))
         tapGestureRecognizer.numberOfTapsRequired = 1
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(FolioReaderContainer.handlePanGesture(_:)))
-        centerNavigationController.view.addGestureRecognizer(tapGestureRecognizer)
-        centerNavigationController.view.addGestureRecognizer(panGestureRecognizer)
-
+        view.addGestureRecognizer(tapGestureRecognizer)
+        
+        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
+        view.addGestureRecognizer(panGestureRecognizer)
+        tapGestureRecognizer.delegate = self
+        
         // Read async book
         if (epubPath != nil) {
             let priority = DISPATCH_QUEUE_PRIORITY_HIGH
@@ -129,13 +137,14 @@ class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
                     // Reload data
                     dispatch_async(dispatch_get_main_queue(), {
                         self.centerViewController.reloadData()
-                        self.addLeftPanelViewController()
+                        self.addRightPanelViewController()
                         self.addAudioPlayer()
                         
                         // Open panel if does not have a saved point
                         if FolioReader.defaults.valueForKey(kBookId) == nil {
-                            self.toggleLeftPanel()
+                            self.toggleRightPanel()
                         }
+//                        self.tease()
                         
                         FolioReader.sharedInstance.isReaderReady = true
                     })
@@ -145,6 +154,33 @@ class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
             print("Epub path is nil.")
             errorOnLoad = true
         }
+    }
+    
+    func tease() {
+                if FolioReader.sharedInstance.teased {
+                        return
+                    }
+        
+                FolioReader.sharedInstance.teased = true
+        
+                let view = centerViewController.view
+                let original = view.frame
+                let translated = original.translate(-50, y: 0)
+        
+                UIView.animateWithDuration(0.3, delay: 0.5, options: [UIViewAnimationOptions.CurveEaseInOut], animations: {
+                    view.frame = translated
+                }, completion: { _ in
+                    UIView.animateWithDuration(0.7, delay: 0.0, usingSpringWithDamping: 0.7, initialSpringVelocity: 1.0, options: [UIViewAnimationOptions.CurveEaseInOut], animations: {
+                        view.frame = original
+                    }, completion: nil)
+            })
+        }
+    
+    func gestureRecognizerShouldBegin(gestureRecognizer: UIGestureRecognizer) -> Bool {
+               guard let tap = gestureRecognizer as? UITapGestureRecognizer else {
+                        return true
+                    }
+            return centerNavigationController.view.frame.contains(tap.locationInView(view))
     }
     
     override func viewDidAppear(animated: Bool) {
@@ -158,32 +194,32 @@ class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
     
     // MARK: CenterViewController delegate methods
     
-    func toggleLeftPanel() {
-        let notAlreadyExpanded = (currentState != .LeftPanelExpanded)
+    func toggleRightPanel() {
+        let notAlreadyExpanded = (currentState != .RightPanelExpanded)
         
         if notAlreadyExpanded {
-            addLeftPanelViewController()
+            addRightPanelViewController()
         }
         
-        animateLeftPanel(shouldExpand: notAlreadyExpanded)
+        animateRightPanel(shouldExpand: notAlreadyExpanded)
     }
     
     func collapseSidePanels() {
         switch (currentState) {
-        case .LeftPanelExpanded:
-            toggleLeftPanel()
+        case .RightPanelExpanded:
+            toggleRightPanel()
         default:
             break
         }
     }
     
-    func addLeftPanelViewController() {
-        if (leftViewController == nil) {
-            leftViewController = FolioReaderSidePanel()
-            leftViewController.delegate = self
-            addChildSidePanelController(leftViewController!)
+    func addRightPanelViewController() {
+        if (rightViewController == nil) {
+            rightViewController = FolioReaderSidePanel()
+            rightViewController.delegate = self
+            addChildSidePanelController(rightViewController!)
             
-            FolioReader.sharedInstance.readerSidePanel = leftViewController
+            FolioReader.sharedInstance.readerSidePanel = rightViewController
         }
     }
     
@@ -193,31 +229,26 @@ class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
         sidePanelController.didMoveToParentViewController(self)
     }
     
-    func animateLeftPanel(shouldExpand shouldExpand: Bool) {
+    func animateRightPanel(shouldExpand shouldExpand: Bool) {
         if (shouldExpand) {
             
-            if let width = pageWidth {
-                if isPad {
-                    centerPanelExpandedOffset = width-400
-                } else {
-                    // Always get the device width
-                    let w = UIInterfaceOrientationIsPortrait(UIApplication.sharedApplication().statusBarOrientation) ? UIScreen.mainScreen().bounds.size.width : UIScreen.mainScreen().bounds.size.height
-                    
-                    centerPanelExpandedOffset = width-(w-70)
-                }
-            }
+            let w = UIInterfaceOrientationIsPortrait(UIApplication.sharedApplication().statusBarOrientation) ? UIScreen.mainScreen().bounds.size.width : UIScreen.mainScreen().bounds.size.height
             
-            currentState = .LeftPanelExpanded
-            delegate.container(didExpandLeftPanel: leftViewController)
-            animateCenterPanelXPosition(targetPosition: CGRectGetWidth(centerNavigationController.view.frame) - centerPanelExpandedOffset)
+            centerPanelExpandedOffset = 70 - w
+            
+            currentState = .RightPanelExpanded
+            delegate.container(didExpandRightPanel: rightViewController)
+            animateCenterPanelXPosition(targetPosition: centerPanelExpandedOffset)
             
             // Reload to update current reading chapter
-            leftViewController.tableView.reloadData()
+            rightViewController.tableView.reloadData()
+            navigationController?.interactivePopGestureRecognizer?.enabled = false
         } else {
             animateCenterPanelXPosition(targetPosition: 0) { finished in
-                self.delegate.container(didCollapseLeftPanel: self.leftViewController)
+                self.delegate.container(didCollapseRightPanel: self.rightViewController)
                 self.currentState = .BothCollapsed
             }
+            navigationController?.interactivePopGestureRecognizer?.enabled = true
         }
     }
     
@@ -242,63 +273,60 @@ class FolioReaderContainer: UIViewController, FolioReaderSidePanelDelegate {
     func addAudioPlayer(){
         // @NOTE: should the audio player only be initialized if the epub has audio smil?
         audioPlayer = FolioReaderAudioPlayer()
-
+        
         FolioReader.sharedInstance.readerAudioPlayer = audioPlayer;
     }
-
+    
     // MARK: Gesture recognizer
     
     func handleTapGesture(recognizer: UITapGestureRecognizer) {
-        if currentState == .LeftPanelExpanded {
-            toggleLeftPanel()
+        if currentState == .RightPanelExpanded {
+            toggleRightPanel()
         }
     }
     
     func handlePanGesture(recognizer: UIPanGestureRecognizer) {
-        let gestureIsDraggingFromLeftToRight = (recognizer.velocityInView(view).x > 0)
+        let gestureIsDraggingFromRightToLeft = (recognizer.velocityInView(view).x < 0)
         
         switch(recognizer.state) {
         case .Began:
-            if currentState == .BothCollapsed && gestureIsDraggingFromLeftToRight {
+            if currentState == .BothCollapsed && gestureIsDraggingFromRightToLeft {
                 currentState = .Expanding
             }
         case .Changed:
-            if currentState == .LeftPanelExpanded || currentState == .Expanding && recognizer.view!.frame.origin.x >= 0 {
-                recognizer.view!.center.x = recognizer.view!.center.x + recognizer.translationInView(view).x
+            if currentState == .RightPanelExpanded || currentState == .Expanding && centerNavigationController.view!.frame.origin.x <= 0 {
+                centerNavigationController.view.center.x = centerNavigationController.view.center.x + recognizer.translationInView(view).x
                 recognizer.setTranslation(CGPointZero, inView: view)
             }
         case .Ended:
-            if leftViewController != nil {
-                let gap = 20 as CGFloat
-                let xPos = recognizer.view!.frame.origin.x
-                let canFinishAnimation = gestureIsDraggingFromLeftToRight && xPos > gap ? true : false
-                animateLeftPanel(shouldExpand: canFinishAnimation)
+            if rightViewController != nil {
+                let w = UIInterfaceOrientationIsPortrait(UIApplication.sharedApplication().statusBarOrientation) ? UIScreen.mainScreen().bounds.size.width : UIScreen.mainScreen().bounds.size.height
+                let gap = 50 as CGFloat
+                let xPos = centerNavigationController.view.frame.origin.x + centerNavigationController.view.frame.size.width
+                let canFinishAnimation = gestureIsDraggingFromRightToLeft && (w - xPos) > gap ? true : false
+
+                animateRightPanel(shouldExpand: canFinishAnimation)
             }
         default:
             break
         }
     }
     
-    // MARK: - Status Bar
-    
-    override func prefersStatusBarHidden() -> Bool {
-        return readerConfig.shouldHideNavigationOnTap == false ? false : shouldHideStatusBar
-    }
-    
-    override func preferredStatusBarUpdateAnimation() -> UIStatusBarAnimation {
-        return UIStatusBarAnimation.Slide
-    }
-    
-    override func preferredStatusBarStyle() -> UIStatusBarStyle {
-        return isNight(.LightContent, .Default)
-    }
-    
-    
-    
     // MARK: - Side Panel delegate
     
     func sidePanel(sidePanel: FolioReaderSidePanel, didSelectRowAtIndexPath indexPath: NSIndexPath, withTocReference reference: FRTocReference) {
         collapseSidePanels()
+        print("Folio Reader Container: Goto section: \(reference.title)")
         delegate.container(sidePanel, didSelectRowAtIndexPath: indexPath, withTocReference: reference)
     }
 }
+
+extension CGRect {
+        func translate(x: CGFloat, y: CGFloat) -> CGRect {
+                var clone = self
+                clone.origin.x = clone.origin.x + x
+                clone.origin.y = clone.origin.y + y
+                return clone
+            }
+    
+    }

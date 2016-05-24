@@ -23,6 +23,7 @@ class FolioReaderSidePanel: UIViewController, UITableViewDelegate, UITableViewDa
     var toolBar: UIToolbar!
     let toolBarHeight: CGFloat = 50
     var tocItems = [FRTocReference]()
+    let topOffset: CGFloat = 64
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -38,6 +39,8 @@ class FolioReaderSidePanel: UIViewController, UITableViewDelegate, UITableViewDa
         tableView.delegate = self
         tableView.dataSource = self
         view.addSubview(tableView)
+        tableViewFrame.origin.y = tableViewFrame.origin.y+topOffset
+        tableViewFrame.size.height = tableViewFrame.height-topOffset
         
         toolBar = UIToolbar(frame: CGRectMake(0, screenBounds().height-toolBarHeight, view.frame.width, toolBarHeight))
         toolBar.autoresizingMask = .FlexibleWidth
@@ -45,6 +48,7 @@ class FolioReaderSidePanel: UIViewController, UITableViewDelegate, UITableViewDa
         toolBar.tintColor = readerConfig.toolBarTintColor
         toolBar.clipsToBounds = true
         toolBar.translucent = false
+        
         view.addSubview(toolBar)
         
         let imageHighlight = UIImage(readerImageNamed: "icon-highlight")
@@ -67,8 +71,10 @@ class FolioReaderSidePanel: UIViewController, UITableViewDelegate, UITableViewDa
         
         let iconFont = UIBarButtonItem(image: imageFont, style: .Plain, target: self, action: #selector(FolioReaderSidePanel.didSelectFont(_:)))
         iconFont.width = space
+        let flexSpace = UIBarButtonItem(barButtonSystemItem: UIBarButtonSystemItem.FlexibleSpace, target: nil, action: nil)
+
         
-        toolBar.setItems([noSpace, iconClose, iconFont, iconHighlight], animated: false)
+        toolBar.setItems([flexSpace, iconHighlight, iconFont,iconClose, noSpace], animated: false)
         
         
         // Register cell classes
@@ -145,7 +151,7 @@ class FolioReaderSidePanel: UIViewController, UITableViewDelegate, UITableViewDa
         // Adjust text position
         cell.indexLabel.center = cell.contentView.center
         var frame = cell.indexLabel.frame
-        frame.origin = isSection ? CGPoint(x: 40, y: frame.origin.y) : CGPoint(x: 20, y: frame.origin.y)
+        frame.origin = isSection ? CGPoint(x: 50, y: frame.origin.y) : CGPoint(x: 30, y: frame.origin.y)
         cell.indexLabel.frame = frame
 
         return cell
@@ -154,7 +160,10 @@ class FolioReaderSidePanel: UIViewController, UITableViewDelegate, UITableViewDa
     // MARK: - Table view delegate
     
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+        print("SidePanel: go to ref: \(indexPath.row)")
+        
         let tocReference = tocItems[indexPath.row]
+        
         delegate?.sidePanel(self, didSelectRowAtIndexPath: indexPath, withTocReference: tocReference)
         
         tableView.deselectRowAtIndexPath(indexPath, animated: true)
@@ -185,7 +194,7 @@ class FolioReaderSidePanel: UIViewController, UITableViewDelegate, UITableViewDa
     // MARK: - Toolbar actions
     
     func didSelectHighlight(sender: UIBarButtonItem) {
-        FolioReader.sharedInstance.readerContainer.toggleLeftPanel()
+        FolioReader.sharedInstance.readerContainer.toggleRightPanel()
         FolioReader.sharedInstance.readerCenter.presentHighlightsList()
     }
     
@@ -194,11 +203,12 @@ class FolioReaderSidePanel: UIViewController, UITableViewDelegate, UITableViewDa
             FolioReader.sharedInstance.isReaderOpen = false
             FolioReader.sharedInstance.isReaderReady = false
             FolioReader.sharedInstance.readerAudioPlayer.stop()
+            FolioReader.sharedInstance.parentViewController.tabBarController?.selectedIndex = 0
         })
     }
     
     func didSelectFont(sender: UIBarButtonItem) {
-        FolioReader.sharedInstance.readerContainer.toggleLeftPanel()
+        FolioReader.sharedInstance.readerContainer.toggleRightPanel()
         FolioReader.sharedInstance.readerCenter.presentFontsMenu()
     }
 

@@ -15,7 +15,8 @@ class FolioReaderSidePanelCell: UITableViewCell {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
         indexLabel.frame = contentView.frame
-        indexLabel.autoresizingMask = UIViewAutoresizing.FlexibleWidth
+//        indexLabel.autoresizingMask = UIViewAutoresizing.FlexibleWidth
+        indexLabel.textAlignment = NSTextAlignment.Right
         contentView.addSubview(indexLabel)
     }
     

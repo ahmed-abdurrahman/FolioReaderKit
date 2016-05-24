@@ -14,7 +14,7 @@ class FolioReaderPageIndicator: UIView {
     var totalMinutes: Int!
     var totalPages: Int!
     var currentPage: Int = 1 {
-        didSet { self.reloadViewWithPage(self.currentPage) }
+        didSet {} // self.reloadViewWithPage(self.currentPage) }
     }
     
     override init(frame: CGRect) {
@@ -33,13 +33,13 @@ class FolioReaderPageIndicator: UIView {
         pagesLabel = UILabel(frame: CGRectZero)
         pagesLabel.font = UIFont(name: "Avenir-Light", size: 10)!
         pagesLabel.textAlignment = NSTextAlignment.Right
-        addSubview(pagesLabel)
+//        addSubview(pagesLabel)
         
         minutesLabel = UILabel(frame: CGRectZero)
         minutesLabel.font = UIFont(name: "Avenir-Light", size: 10)!
         minutesLabel.textAlignment = NSTextAlignment.Right
 //        minutesLabel.alpha = 0
-        addSubview(minutesLabel)
+//        addSubview(minutesLabel)
     }
     
     required init?(coder aDecoder: NSCoder) {
