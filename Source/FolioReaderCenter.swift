@@ -1074,11 +1074,12 @@ class FolioReaderCenter: UIViewController, UICollectionViewDelegate, UICollectio
     
     func container(sidePanel: FolioReaderSidePanel, didSelectRowAtIndexPath indexPath: NSIndexPath, withTocReference reference: FRTocReference) {
         let item = findPageByResource(reference)
-        
+        loadingView.startAnimating()
         if item < totalPages-1 {
             let indexPath = NSIndexPath(forRow: item, inSection: 0)
             changePageWith(indexPath: indexPath, animated: false, completion: { () -> Void in
                 self.updateCurrentPage()
+                self.loadingView.stopAnimating()
             })
             tempReference = reference
         } else {
