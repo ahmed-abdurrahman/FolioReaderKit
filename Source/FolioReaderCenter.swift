@@ -124,7 +124,7 @@ class ScrollScrubber: NSObject, UIScrollViewDelegate {
     
     func hide() {
         visible = false
-        resetScrollDelta()
+//        resetScrollDelta()
         UIView.animateWithDuration(hideSpeed, animations: {
             self.slider.alpha = 0
         })
